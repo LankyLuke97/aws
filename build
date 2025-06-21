@@ -1,6 +1,12 @@
 #!/bin/bash
 
+for md in $(ls static-html/markdown/*.md); do
+	html_file=$(basename $md .md)
+	python -m markdown $md > static-html/data/$html_file.html
+done
+
 docker rm -f test-nginx
 docker image rm -f test
 docker build --tag test .
 docker run -d -p 8080:80 --name test-nginx test
+

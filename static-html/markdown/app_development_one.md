@@ -1,0 +1,68 @@
+Alrighty then, let's see what this containerisation and cloud malarkey is all about. 
+
+## Part the first: Why?
+
+I want - need - to be better in my role as a DevOps engineer. Not need in that I'll die if I don't, but need in that a) I hate doing things half-heartedly (I would rather not do them at all), b) it's a well-paying gig if one does it well, with an option on c) I care deeply about Quality. In my day job, I'm struggling to push our technical capabilities, generally for reasons outside of my own ability, but, no doubt, an improvement in that area would be no bad thing.  
+
+## Part the second and much larger: What?
+
+I've done some work with containerisation before, but primarily toy projects, nothing all that helpful; that being said, I think I did write a container that came with VS Code and Python installed for ready development, but that was two years ago now. I've done nothing with orchestration tools like Kubernetes and nothing with the cloud.  
+
+I'm picking AWS as my platform to learn based purely on market share; I know too little about the ins-and-outs of the various providers to make an otherwise informed decision. Additionally, the litte cloud work at my current employer is on Azure, so I may well be able to get a surface level understanding of the other major provider there.  
+
+I'm going to start by deploying an Nginx-container-based website to an EC2 container that I can access via the web; I'll populate the site with these blog posts (hello!). It seems to me that this is the 'hello world' of cloud computing.  
+
+After that, I would like to integrate some CI/CD pipelines with Github. These posts are just markdown files in a Git repo, so when I push an update, I bet there's a way to automatically update the cloud deployment. Presuming I can get that working, the next step would be monitoring with Grafana (since I have used it somewhat at work, and it's a relatively popular open-source standard). I started writing a 'then, perhaps', but let's instead start with this bucket list of things I don't know how to do.  
+
+## Part the third: Nginx and Docker
+
+Ok, so I have this markdown file, and another where I rant about the work done by one of the teams I frequently butt heads with. They're both sitting in a directory called 'static-html' despite being markdown. I don't yet know if that's going to be an issue, but I know you can quite easily convert from .md to .html, for the most part, so I can address that later perhaps. Let's start with a container running the default nginx image: `docker run nginx`. 
+
+Ok, technically that worked, but I didn't map any ports, so I can't reach it. I need to tell my machine to forward traffic on a certain port to the port in the container. Probably, it's also worth running this in detached mode so I can continue to use my terminal while I do so, and give the container a name to make it easy to refer to.  
+
+`docker run nginx -p 8080:80 --name test-nginx -it`  
+...
+No, that's not quite right...  
+
+`docker run -p 8080:80 -d --name test-nginx nginx`  
+
+That's better. I'll investigate the exact ordering later, but having the container name between run and the -p (or publish) flag was clearly causing issues, and -d is for detached mode, not -it which I believe is for interactive terminal, a flag more useful for running a Linux container, for example. A quick check confirms that I can access the nginx container on localhost:  
+![Default nginx website](images/1_1_nginx_accessible.png). 
+
+Next up, I need to serve my own content. I start a Dockerfile with which to build my image:  
+
+```
+FROM nginx
+COPY static-html/data /usr/share/nginx/html
+```
+
+However, this didn't display my custom index.html file. So, I decided (after scrolling through some guides) to run a wrapper container that I _could_ ssh into, in order to explore what was going on. This would be a simple Linux container with volumes mapped to volumes created on the nginx server.  
+
+Adding to the Dockerfile the lines:  
+
+```
+VOLUME /usr/share/nginx/html
+VOLUME /etc/nginx
+```
+
+And running the command `docker run -it --volumes-from test-nginx --name files debian /bin/bash` left me able to view the content of those files (I presume). So, let's go exploring.  
+
+Running the `ls` command shows me a normal looking root directory, including a __usr__ folder, so I presume if I run `ls /usr/share/nginx/html`, I should see all my files, and indeed I do. A quick `cat` of the index.html shows that it's my own rough custom file as well, so that's good. Then the issue seems likely to be the config file?  
+
+At this point, I see an easier method of checking details on the container, which is to change the Dockerfile to start from nginx:alpine, and then in a terminal run `docker run -it test-nginx sh`, which is pretty straightforward.  
+
+As will always be the way, this is the point where my index.html starts displaying, as I changed a couple other itmes. I now have a Dockerfile that looks like this:
+
+```
+FROM nginx:alpine
+RUN rm -rf /usr/share/nginx/html/*
+COPY ./static-html/data/ /usr/share/nginx/html/
+```
+
+This copies up a simple index.html, which currently just contains a link to this markdown you're reading, as this is also in the static-html/data/ directory. Now, when I go to localhost:8080, I see the page I would expect. When I click the link, it downloads the file rather than displaying it...  
+
+So, now I need to convert to html on the fly...or just convert ahead of time, but that's boring!  
+
+...
+
+On closer inspection, neither PHP nor Javascript nor any of the other easy options are on the critical path of 'things to learn' right now, so I've found a Python library to run the conversion ahead of time. C'est la vie.  
