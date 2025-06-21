@@ -1,2 +1,5 @@
-FROM nginx
-COPY static-html/index.html /usr/share/nginx/html
+FROM nginx:alpine
+RUN rm -rf /usr/share/nginx/html/*
+
+COPY ./static-html/data/ /usr/share/nginx/html/
+
