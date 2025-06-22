@@ -3,7 +3,7 @@
 I'm currently moving flat; this is a record for both my partner and I, as we've lasted nineteen months in the current flat. I believe the record prior to this was fifteen months for me and eleven months for my partner. As part of the move, we had to order some new boxes from Amazon, as we'd kept none of those we'd used in the move here. There's something strange about having twenty cardboard boxes delivered in one large cardboard box, a mothership of sorts, but such is the modern world.  
 
 Upon opening the box of boxes and beginning to assemble one of the diminutive boxes held therein to prepare for the move, I found this on its underside:  
-[Image of a box with a caricature of the underside of a vehicle](box_image.png)  
+[Image of a box with a caricature of the underside of a vehicle](images/box_image.png)  
 If you excuse the poor image quality and the poor cropping, and inspect instead the box, you might well see what made me laugh: someone took their time with this.  
 
 ## 1. Why do you try my patience?

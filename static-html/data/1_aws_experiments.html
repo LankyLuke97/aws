@@ -33,3 +33,6 @@ COPY ./static-html/data/ /usr/share/nginx/html/</code></p>
 <p>So, now I need to convert to html on the fly...or just convert ahead of time, but that's boring!  </p>
 <p>...</p>
 <p>On closer inspection, neither PHP nor Javascript nor any of the other easy options are on the critical path of 'things to learn' right now, so I've found a Python library to run the conversion ahead of time. C'est la vie.  </p>
+<p>Some quick additions to my bash build script later, and now all markdown files in a designated folder within static-html are converted to html and copied into the nginx container during during the containerisation process. I currently hardcode references to them in the index.html file to be able to access them, but I could generate that programmatically, using Python and Jinja2, or perhaps just using awk or sed or some such based on the markdown fiels that are convereted. Then, finally, I can read myself on my own little desktop.</p>
+<h2>Part the fourth: Next steps</h2>
+<p>Whilst it's all well and good that I can read myself, I'd like other people to be able to read this and marvel at my incompetence. I'd best go investigate ECR...</p>
