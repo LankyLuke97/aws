@@ -6,7 +6,7 @@
 <p>I'm picking AWS as my platform to learn based purely on market share; I know too little about the ins-and-outs of the various providers to make an otherwise informed decision. Additionally, the litte cloud work at my current employer is on Azure, so I may well be able to get a surface level understanding of the other major provider there.  </p>
 <p>I'm going to start by deploying an Nginx-container-based website to an EC2 container that I can access via the web; I'll populate the site with these blog posts (hello!). It seems to me that this is the 'hello world' of cloud computing.  </p>
 <p>After that, I would like to integrate some CI/CD pipelines with Github. These posts are just markdown files in a Git repo, so when I push an update, I bet there's a way to automatically update the cloud deployment. Presuming I can get that working, the next step would be monitoring with Grafana (since I have used it somewhat at work, and it's a relatively popular open-source standard). I started writing a 'then, perhaps', but let's instead start with this bucket list of things I don't know how to do.  </p>
-<h2>Part the third: Nginx and Docker</h2>
+<h2>Part the third and even larger: Nginx and Docker</h2>
 <p>Ok, so I have this markdown file, and another where I rant about the work done by one of the teams I frequently butt heads with. They're both sitting in a directory called 'static-html' despite being markdown. I don't yet know if that's going to be an issue, but I know you can quite easily convert from .md to .html, for the most part, so I can address that later perhaps. Let's start with a container running the default nginx image: <code>docker run nginx</code>. </p>
 <p>Ok, technically that worked, but I didn't map any ports, so I can't reach it. I need to tell my machine to forward traffic on a certain port to the port in the container. Probably, it's also worth running this in detached mode so I can continue to use my terminal while I do so, and give the container a name to make it easy to refer to.  </p>
 <p><code>docker run nginx -p 8080:80 --name test-nginx -it</code><br />
@@ -16,23 +16,23 @@ No, that's not quite right...  </p>
 <p>That's better. I'll investigate the exact ordering later, but having the container name between run and the -p (or publish) flag was clearly causing issues, and -d is for detached mode, not -it which I believe is for interactive terminal, a flag more useful for running a Linux container, for example. A quick check confirms that I can access the nginx container on localhost:<br />
 <img alt="Default nginx website" src="images/1_1_nginx_accessible.png" />. </p>
 <p>Next up, I need to serve my own content. I start a Dockerfile with which to build my image:  </p>
-<p><code>FROM nginx
-COPY static-html/data /usr/share/nginx/html</code></p>
+<p><code>FROM nginx  
+COPY static-html/data /usr/share/nginx/html</code>  </p>
 <p>However, this didn't display my custom index.html file. So, I decided (after scrolling through some guides) to run a wrapper container that I <em>could</em> ssh into, in order to explore what was going on. This would be a simple Linux container with volumes mapped to volumes created on the nginx server.  </p>
 <p>Adding to the Dockerfile the lines:  </p>
-<p><code>VOLUME /usr/share/nginx/html
-VOLUME /etc/nginx</code></p>
+<p><code>VOLUME /usr/share/nginx/html  
+VOLUME /etc/nginx</code>  </p>
 <p>And running the command <code>docker run -it --volumes-from test-nginx --name files debian /bin/bash</code> left me able to view the content of those files (I presume). So, let's go exploring.  </p>
 <p>Running the <code>ls</code> command shows me a normal looking root directory, including a <strong>usr</strong> folder, so I presume if I run <code>ls /usr/share/nginx/html</code>, I should see all my files, and indeed I do. A quick <code>cat</code> of the index.html shows that it's my own rough custom file as well, so that's good. Then the issue seems likely to be the config file?  </p>
 <p>At this point, I see an easier method of checking details on the container, which is to change the Dockerfile to start from nginx:alpine, and then in a terminal run <code>docker run -it test-nginx sh</code>, which is pretty straightforward.  </p>
 <p>As will always be the way, this is the point where my index.html starts displaying, as I changed a couple other itmes. I now have a Dockerfile that looks like this:</p>
-<p><code>FROM nginx:alpine
-RUN rm -rf /usr/share/nginx/html/*
-COPY ./static-html/data/ /usr/share/nginx/html/</code></p>
+<p><code>FROM nginx:alpine  
+RUN rm -rf /usr/share/nginx/html/*  
+COPY ./static-html/data/ /usr/share/nginx/html/</code>  </p>
 <p>This copies up a simple index.html, which currently just contains a link to this markdown you're reading, as this is also in the static-html/data/ directory. Now, when I go to localhost:8080, I see the page I would expect. When I click the link, it downloads the file rather than displaying it...  </p>
 <p>So, now I need to convert to html on the fly...or just convert ahead of time, but that's boring!  </p>
 <p>...</p>
 <p>On closer inspection, neither PHP nor Javascript nor any of the other easy options are on the critical path of 'things to learn' right now, so I've found a Python library to run the conversion ahead of time. C'est la vie.  </p>
-<p>Some quick additions to my bash build script later, and now all markdown files in a designated folder within static-html are converted to html and copied into the nginx container during during the containerisation process. I currently hardcode references to them in the index.html file to be able to access them, but I could generate that programmatically, using Python and Jinja2, or perhaps just using awk or sed or some such based on the markdown fiels that are convereted. Then, finally, I can read myself on my own little desktop.</p>
+<p>Some quick additions to my bash build script later, and now all markdown files in a designated folder within static-html are converted to html and copied into the nginx container during during the containerisation process. I currently hardcode references to them in the index.html file to be able to access them, but I could generate that programmatically, using Python and Jinja2, or perhaps just using awk or sed or some such based on the markdown fields that are convereted. Then, finally, I can read myself on my own little desktop.</p>
 <h2>Part the fourth: Next steps</h2>
 <p>Whilst it's all well and good that I can read myself, I'd like other people to be able to read this and marvel at my incompetence. I'd best go investigate ECR...</p>

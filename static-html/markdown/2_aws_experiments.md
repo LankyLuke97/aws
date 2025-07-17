@@ -1,0 +1,45 @@
+Ok, so, last time I started with containers. Now, let's move onto orchestrating them with Kubernetes. There's some quote here about running and walking, but I prefer Moist's version: "Run before you walk! Fly before you crawl!" Maybe not the second part, I'm not fond of heights.
+
+## Part 1 - Ok, where do I even start?
+
+Well, as with many instances, with a tutorial. My general approach is to start with a LinkedIn course or path, and then follow it up with any books I like. My reasoning behind this is that by doing the video course first, I can get just enough of a grasp of the subject matter to a) get started and b) tell when a textbook is good or not. The books are definitely the place to be, in case you didn't know. In this case, I've watched a couple of courses, and the second of the two is about transforming a static html website from a VM host to running with Docker and Kubernetes on the cloud; interestingly, I'm halfway there with that already. Sounds ideal for my next steps.  
+
+I followed one [video course](https://linkedin.com/learning-kubernetes-16086900/) which ran through the very basics of getting a cluster up-and-running, including some light touches on the various components that make up a cluster. I started to follow the second video in the learning path, as I desribed above, before remembering that a) you learn better if you try the thing first, even if you have *literally no clue what you're doing or how to start* (remember that for later, it's weird and unintuitive) and b) I need to avoid tutorial hell. Basically, I should presume I know enough until proven otherwise.  
+
+I started with a development namespace in which to launch my pods, followed by a deployment that specifies two replications of my container. Lastly, I add a loadbalancer service that should direct from port 80 on the browser to port 80 on the nginx container. At this point, I also considered converting my 'build' script to a Makefile, but decided to come back to this later.  
+
+Next up, minikube. This is a tool to run a single-node Kubernetes cluster on your local machine for development and testing purposes, which sounds like exactly what this is! With that installed, I'm able to apply the namespace, the deployment, the load balancer service, and start a minikube tunnel to make everything accessible...at which point I hit my first issue. `kubectl get pods -n development` shows **ErrImagePull** for both pods. I suspected this would be a problem, but thought I'd run with it until it confirmed it would be, but I've not specified a Docker registry from which to pull these images; I just gave the image name and hoped it would look locally. Can you tell I am not a true officianado?  
+
+At this point, I started down an absolute mess of a process, trying to get the cluster to deploy pods using the static website image I'd created in the previous write-up. Due to a lack of understanding, I'm sure, about networking in Kubernetes, Docker registries, and the like, the process was a nightmare. Having figured out in the paragraph above that the issue was a lack of a specified registry, I started by running a local docker registry as a detached container, with `docker run --name local-registry -d --restart=always -p 5000:5000 --mount type=bind,src=$(pwd)/registry/storage,dst=/var/libe/regsitry registry:2` - or, in layman's terms, `run a container based on v2 of the registry image, map /var/lib/registry inside the container to a folder on my host machine, expose port 5000 and map it to my host's port 5000, make sure it restarts if it fails, and call it local registry`. *Now* it should work.  
+
+The astute among you will have guessed that it didn't. Ah - I need to reference the docker registry in the Kubernetes manifest. Instead of:  
+```  
+containers:  
+- name: blog-container  
+  image: test  
+```  
+It should be...what should it be? It's not `image: localhost:5000/test`, because the registry isn't running on the pod running the Kubernetes API server, which I *think* is what will be executing this deployment. The internet suggested running `minikube ssh "ip route"` and searching for the `default` route, which would be the IP it believed to represent the host, but that didn't work when placed in. Maybe the kluster needed to be started with the local registry defined as an insecure registry to get around there being no credentials? No, that seems to be for where minikube pulls the images for the containers that make up the cluster (that's another guess). Maybe I need to do something with the networking to match the two up? This seems the most likely solution, but I understand too little at the moment to figure that out.  
+
+I toyed, for a while, with running a local-docker registry as a container *within* the cluster itself, which seems like a neat solution, but I ran up against similar networking issues...I think...when pushing from the host tothe registry within the cluster *and*, for some reason, when pulling from the local registry inside the cluster. Again, showing off my astounding lack of Kubernetes networking knowledge.  
+
+Eventually, I settled on a simple solution provided by minikube itself: `minikube image load image_name`, which makes an image available for the cluster. It's fine for testing the cluster, which is more what I'm concerned with here. Even this came with its challenges; eventually, I found that this no longer overwrites old images (*I think* - I'm getting sick of saying this, but I don't know any of this for certain yet) and that I needed to add the **--overwrite** flag to make it do so. I also had to adjust the deployment manifest to not try to pull the image from any registry, which looked like this:  
+```  
+containers:  
+- name: blog-container  
+  image: test  
+  imagePullPolicy: Never  
+```  
+
+This has been a short summary of what was 5 hours of messy, messy work that lacked clear thought, clear direction, and any semblance of method. I have been much better, recently, with working calmly and methodically, metaphorically laying out my mental tools before approaching a problem, working step-by-step through said problem, etc., all of which has meant I've solved problems recently that I know would have stumped me before.  
+
+Here, I let all that slide. At each failed step, I just threw myself at the next possible solution, without stopping to consider what hadn't worked and perhaps why. I didn't set myself questions to answer about the problem that would have clarified what I actually wanted.  
+
+Enough bashing myself, however. In the end, I had it. All that was left was to start a minikube tunnel in the background, which is a quick way of exposing the cluster to the host (...**I think**), and I could see my website in all its glory:  
+
+![Containerised and Kubernetised ugly ass static website](images/2_1_static_website.png). 
+
+After all of that, I need a break. I also need to figure out what's going on with this cluster in terms of networking, how one should handle private registries with Kubernetes, and what the next thing to learn might be...
+
+## Part 2 - Whoops, I forgot to break this one down into sections...
+
+There's been a last-minute addition! The image within the cluster was *still* not updating. I dug into why: `kubectl describe pod pod_name -n developemnt | grep Image` showed that the image didn't match the locally built one (which did show the updated content when I ran it standalone with Docker); `minikube image ls --format=yaml` suggested the image wasn't updating the way I thought it was. Eventually, I decided to build the image *within* the cluster itself. Running `eval $(minikube docker-env)` essentially sets the standard docker command to map to the one running inside the cluster, meaning that when I then run the build command, it builds within the cluster. And, *finally*, it worked. Glory be.

@@ -14,7 +14,7 @@ I'm going to start by deploying an Nginx-container-based website to an EC2 conta
 
 After that, I would like to integrate some CI/CD pipelines with Github. These posts are just markdown files in a Git repo, so when I push an update, I bet there's a way to automatically update the cloud deployment. Presuming I can get that working, the next step would be monitoring with Grafana (since I have used it somewhat at work, and it's a relatively popular open-source standard). I started writing a 'then, perhaps', but let's instead start with this bucket list of things I don't know how to do.  
 
-## Part the third: Nginx and Docker
+## Part the third and even larger: Nginx and Docker
 
 Ok, so I have this markdown file, and another where I rant about the work done by one of the teams I frequently butt heads with. They're both sitting in a directory called 'static-html' despite being markdown. I don't yet know if that's going to be an issue, but I know you can quite easily convert from .md to .html, for the most part, so I can address that later perhaps. Let's start with a container running the default nginx image: `docker run nginx`. 
 
@@ -31,19 +31,19 @@ That's better. I'll investigate the exact ordering later, but having the contain
 
 Next up, I need to serve my own content. I start a Dockerfile with which to build my image:  
 
-```
-FROM nginx
-COPY static-html/data /usr/share/nginx/html
-```
+```  
+FROM nginx  
+COPY static-html/data /usr/share/nginx/html  
+```  
 
 However, this didn't display my custom index.html file. So, I decided (after scrolling through some guides) to run a wrapper container that I _could_ ssh into, in order to explore what was going on. This would be a simple Linux container with volumes mapped to volumes created on the nginx server.  
 
 Adding to the Dockerfile the lines:  
 
-```
-VOLUME /usr/share/nginx/html
-VOLUME /etc/nginx
-```
+```  
+VOLUME /usr/share/nginx/html  
+VOLUME /etc/nginx  
+```  
 
 And running the command `docker run -it --volumes-from test-nginx --name files debian /bin/bash` left me able to view the content of those files (I presume). So, let's go exploring.  
 
@@ -53,11 +53,11 @@ At this point, I see an easier method of checking details on the container, whic
 
 As will always be the way, this is the point where my index.html starts displaying, as I changed a couple other itmes. I now have a Dockerfile that looks like this:
 
-```
-FROM nginx:alpine
-RUN rm -rf /usr/share/nginx/html/*
-COPY ./static-html/data/ /usr/share/nginx/html/
-```
+```  
+FROM nginx:alpine  
+RUN rm -rf /usr/share/nginx/html/*  
+COPY ./static-html/data/ /usr/share/nginx/html/  
+```  
 
 This copies up a simple index.html, which currently just contains a link to this markdown you're reading, as this is also in the static-html/data/ directory. Now, when I go to localhost:8080, I see the page I would expect. When I click the link, it downloads the file rather than displaying it...  
 
