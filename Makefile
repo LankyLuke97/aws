@@ -1,4 +1,4 @@
-.PHONY: run_blog stop_blog create_local_registry build_html 
+.PHONY: run_blog stop_blog create_local_registry build_html update_cloud
 
 publish_blog: build_html
 	eval $$(minikube -p minikube docker-env) && docker build --tag test .
@@ -23,7 +23,7 @@ build_html:
 	mkdir -p static-html/data
 	for md in $$(ls static-html/markdown/*.md); do \
 		html_file=$$(basename $$md .md); \
-		/home/lhowden/.local/python/bin/python3 -m markdown $$md > static-html/data/$$html_file.html; \
+		python3 -m markdown $$md > static-html/data/$$html_file.html; \
 	done
 	cp static-html/markdown/index.html static-html/data/index.html
 
@@ -59,3 +59,7 @@ install_docker:
 	  tee /etc/apt/sources.list.d/docker.list > /dev/null
 	apt-get update
 	apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin	
+	
+update_cloud:
+	rsync -avz --exclude venv -e "ssh -i /home/lhowden/personal/aws/blog.pem" ./ ubuntu@18.134.243.39:/home/ubuntu/website
+	ssh ubuntu@18.134.243.39 -i blog.pem 'cd website && source venv/bin/activate && make stop_blog && make run_blog && deactivate'
