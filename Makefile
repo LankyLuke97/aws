@@ -39,6 +39,7 @@ create_cluster:
 	minikube kubectl -- apply -f kube/registry.yaml
 	minikube kubectl -- apply -f kube/deployment.yaml
 	minikube kubectl -- apply -f kube/load_balancer.yaml
+	minikube kubectl -- apply -f kube/ingress.yaml
 
 install_minikube:
 	curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
