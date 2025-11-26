@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app: "{{ .Chart.Name }}-{{ .Release.Name }}" 
+  name: "{{ .Chart.Name }}-{{ .Release.Name }}"
+  namespace: development
+spec:
+  rules:
+  - host: {{ .Values.ingress.host }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: "{{ .Chart.Name }}-{{ .Release.Name }}"   
+            port:
+              number: {{ .Values.ports.target }}
+        path: /
+        pathType: Prefix

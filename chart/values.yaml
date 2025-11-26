@@ -1,0 +1,11 @@
+image:
+  name: test:latest
+  pullPolicy: Never
+ingress:
+  host: alabaster-captain.local
+ports:
+  source: 80
+  target: 80
+replicas: 2
+strategy:
+  type: RollingUpdate

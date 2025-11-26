@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: "{{ .Chart.Name }}-{{ .Release.Name }}"
+  name: "{{ .Chart.Name }}-{{ .Release.Name }}"
+  namespace: development
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: "{{ .Chart.Name }}-{{ .Release.Name }}"
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: {{ .Values.strategy.type }}
+  template:
+    metadata:
+      labels:
+        app: "{{ .Chart.Name }}-{{ .Release.Name }}"
+    spec:
+      containers:
+      - env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        image: {{ .Values.image.name }} 
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        name: "{{ .Chart.Name }}-{{ .Release.Name }}-container"
+        ports:
+        - containerPort: {{ .Values.ports.source }}
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
